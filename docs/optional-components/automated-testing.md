@@ -114,6 +114,34 @@ docker exec -it isle-apache-td bash -c "cd /var/www/html/sites/behat && ./run-is
 docker exec -it isle-apache-td bash -c "cd /var/www/html/sites/behat && ./run-isle-tests.sh --run=apache"
 ```
 
+## Customizing Your Own Behat Suite
+* If you are interested in customizing the Behat suite so that you can run it in a test environment version of your site, follow these directions.
+* 1. Create your own fork of isle-behat found at https://github.com/Islandora-Collaboration-Group/isle-behat
+* 2. In your ISLE installation, edit your .circleci/config.yml file to pull in your customized behat repo instead of the generic repo.
+        * 2.1 Replace the url to the generic isle-behat repo with the one for your specific behat repo ```- run:
+          name: Fetch behat suite repo
+          command: |
+            mkdir data
+            cd ~/isle
+            git clone https://github.com/Islandora-Collaboration-Group/isle-behat.git isle-behat``` 
+        * 2.2 If your repo is not public then you will want to clone this repo using ssh instead of https.  In this case you will need to create and add an ssh key to your .circleci/config.yml file using these instructions: https://circleci.com/docs/2.0/add-ssh-key/ and https://circleci.com/docs/2.0/gh-bb-integration/
+* 3. Edit your .circleci/config.yml file to use your code, database, and drupal files, instead of those for a generic ISLE installation.
+        * 3.1 First get a copy of your database and drupal files.  Then put them in a location where CircleCi will be able to access them. This works best if you put them in a location that allows SSH access.
+        * 3.2 Then comment out this section: ``` - run:
+           name: Start container and verify it's working
+           command: |
+             set -x
+             docker exec -it isle-apache-td bash /utility-scripts/isle_drupal_build_tools/isle_islandora_installer.sh
+           no_output_timeout: 20m ```
+        * 3.3 Next add in steps that fetch your sql database and drupal files from your pre-created location.  When writing these steps it will be useful to compare the steps in the .circleci/config.yml to the steps necessary to create your local, as you will need to import your database into your docker container, among other steps.
+* 4. Add steps that will disable any security features that might prevent Behat from logging in to the test environment version of your site.
+        * 4.1 One example of this is CAS.  In order to disable CAS add in this step: ```      - run:
+          name: Disable CAS
+          command: |
+            docker exec -it isle-apache-td bash -c "cd /var/www/html/ && drush dis cas -y"```
+* 5. Start running CircleCi. Problem solve by editiing your behat tests as necessary.
+        * 5.1 When you first run the automated test suite it is quite likely that you will have some failures.  You will then need to edit your specific behat tests to address differences between your site and a generic ISLE site.
+
 ## Additional Notes
 * If you have your own ISLE already, just omit that initial `git clone` for ISLE. If you use the script, we're assuming you've cloned our whole repository, switched to the `travis` branch, and are running it from there.
 * Modifications to tests may be necessary based on your institutional theme and configuration.
